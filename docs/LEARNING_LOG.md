@@ -124,7 +124,7 @@ scenario: ran both dev servers, confirmed the page worked, then killed the `paym
 `/checkout`. Found a real gotcha along the way: webpack-dev-server's own error overlay (a dev-only feature) was
 covering the page with a red "Uncaught runtime errors" screen even though our React app had already handled the
 error correctly underneath it — confirmed via `document.getElementById('root').innerText`, which showed the
-header *and* our fallback message were both there. Scoped `devServer.client.overlay.runtimeErrors` to `false` so
+header _and_ our fallback message were both there. Scoped `devServer.client.overlay.runtimeErrors` to `false` so
 compile errors still interrupt but handled runtime errors don't visually block the page in dev. Re-tested after
 that change: header rendered, fallback message rendered, no crash, confirmed by screenshot.
 
