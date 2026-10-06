@@ -68,3 +68,21 @@ How I'd explain it in an interview: "Webpack's css-loader rewrites every class n
 a unique, scoped identifier, so `styles.wrapper` in my code becomes a hashed class at build time — two files can
 both have a `.wrapper` rule and never collide. I had to explicitly disable css-loader's newer default of named
 exports to keep using the common `import styles from './x.module.scss'` pattern."
+
+## Day 1, Step 5: React Router shell in host
+
+What we did: added `<BrowserRouter>` with a persistent `<Header>` outside `<Routes>`, one real route (`/checkout`
+→ `CheckoutPage`), and a redirect from `/` to `/checkout` via `<Navigate replace />`. Installed
+`react-router-dom@^7.18.4` instead of the 6.x line the gotcha notes assumed, because 6.x has an unpatched
+open-redirect advisory (CVE-2025-68470) fixed only starting 7.18.0 — worth knowing for a checkout flow
+specifically, where redirect handling is security-relevant. The v6-style API (`BrowserRouter`/`Routes`/`Route`)
+still works unchanged in v7's "library mode."
+
+Why: the header being outside `<Routes>` is deliberate groundwork for Day 1's resilience requirement — if the
+routed content (later: the remote-loaded payment methods) fails, the header must keep rendering. Routing first,
+before Module Federation, keeps the two concerns separate and testable independently.
+
+How I'd explain it in an interview: "I used React Router's client-side routing so navigating to `/checkout`
+updates the URL via the History API without a full page reload. The header lives outside the `<Routes>` block on
+purpose, so it survives even if the routed page itself throws — that matters once the checkout route depends on
+a remote micro-frontend that can fail independently."
