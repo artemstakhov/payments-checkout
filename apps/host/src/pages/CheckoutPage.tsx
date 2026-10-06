@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { ErrorBoundary } from '../ErrorBoundary';
 
 const PaymentMethods = lazy(() =>
   import('paymentMethods/PaymentMethods').then((module) => ({ default: module.PaymentMethods })),
@@ -7,9 +8,13 @@ const PaymentMethods = lazy(() =>
 export function CheckoutPage(): JSX.Element {
   return (
     <section>
-      <Suspense fallback={<p>Loading payment methods…</p>}>
-        <PaymentMethods />
-      </Suspense>
+      <ErrorBoundary
+        fallback={<p>Payment methods are unavailable right now. Please try again later.</p>}
+      >
+        <Suspense fallback={<p>Loading payment methods…</p>}>
+          <PaymentMethods />
+        </Suspense>
+      </ErrorBoundary>
     </section>
   );
 }

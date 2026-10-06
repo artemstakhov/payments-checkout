@@ -115,3 +115,27 @@ Both apps mark `react` and `react-dom` as singleton shared dependencies so there
 running, which is required for hooks to work correctly across the module boundary. Because the federation runtime
 has to load before any app code can safely run, the entry point of each app is just a dynamic `import()` — that's
 the 'async boundary' gotcha."
+
+## Day 1, Step 7: Resilience — error boundary around the remote
+
+What we did: added `ErrorBoundary.tsx`, a class component (`getDerivedStateFromError` + `componentDidCatch` —
+there's still no hook equivalent for this), wrapped around `<Suspense>` in `CheckoutPage`. Tested the real
+scenario: ran both dev servers, confirmed the page worked, then killed the `payment-methods` server and reloaded
+`/checkout`. Found a real gotcha along the way: webpack-dev-server's own error overlay (a dev-only feature) was
+covering the page with a red "Uncaught runtime errors" screen even though our React app had already handled the
+error correctly underneath it — confirmed via `document.getElementById('root').innerText`, which showed the
+header *and* our fallback message were both there. Scoped `devServer.client.overlay.runtimeErrors` to `false` so
+compile errors still interrupt but handled runtime errors don't visually block the page in dev. Re-tested after
+that change: header rendered, fallback message rendered, no crash, confirmed by screenshot.
+
+Why: `<Suspense>` only knows how to wait, not how to handle failure — if the lazy import's promise rejects,
+`React.lazy` turns that into a thrown render error, which by default unmounts the whole tree unless something
+catches it. The error boundary's placement (around just the remote, not the whole app) is what keeps the header
+alive when the remote fails — same principle as the header being a sibling of `<Routes>`, one level deeper.
+
+How I'd explain it in an interview: "An error boundary is a class component that catches render-time errors in
+its child tree and shows a fallback instead of letting the whole app crash. I wrapped it around just the
+lazy-loaded remote component, so if the micro-frontend fails to load — network issue, remote deployment down,
+whatever — the header and the rest of the page keep working, and the user sees a clear message instead of a blank
+or broken page. I verified this by actually killing the remote's dev server and confirming the fallback rendered,
+rather than just trusting the code looked right."
