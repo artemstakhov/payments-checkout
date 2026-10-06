@@ -9,7 +9,7 @@ description. Honest label: personal learning project.
 - `apps/server`: tiny GraphQL API (Apollo Server) with in-memory data.
 
 ## Day 1: Webpack + Module Federation (target: 5-6 h)
-- [ ] Monorepo (npm workspaces), TS strict, Prettier, ESLint, shared Babel config.
+- [x] Monorepo (npm workspaces), TS strict, Prettier, ESLint, shared Babel config.
 - [ ] Webpack 5 config per app: babel-loader, SCSS Modules (host), styled-components (remote), HtmlWebpackPlugin,
       contenthash file names, devServer, code splitting by route (React.lazy).
 - [ ] Module Federation: remote exposes `./PaymentMethods`; host consumes it; shared singletons; async bootstrap.

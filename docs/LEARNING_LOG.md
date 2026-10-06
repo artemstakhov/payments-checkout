@@ -17,3 +17,19 @@ server live in one repository but install and version their dependencies indepen
 on from the start so the compiler catches null/undefined bugs early. ESLint checks code quality, Prettier only
 handles formatting, and `eslint-config-prettier` turns off the ESLint rules that would otherwise conflict with
 Prettier's formatting choices."
+
+## Day 1, Step 2: Webpack 5 bundles the host app
+
+What we did: wrote `apps/host/webpack.config.js` — entry `src/index.tsx`, `babel-loader` pointed at the shared
+root `babel.config.json`, `HtmlWebpackPlugin` to generate `index.html`, output filenames with `[contenthash]`, and
+a `devServer` on port 3000. Added a minimal `App.tsx` + `index.tsx` that mounts React with `createRoot`. Verified
+both `npm run build` (production bundle) and `npm run dev` (dev server, checked in an actual browser) work.
+
+Why: Webpack is the actual bundler being learned here (not Vite), and `contenthash` + `HtmlWebpackPlugin` is the
+standard pattern for cache-busting production deploys — the filename only changes when the file's content does,
+so old bundles can be cached forever by the browser/CDN.
+
+How I'd explain it in an interview: "Webpack's `babel-loader` transpiles each TypeScript/JSX file using our shared
+Babel config, bundles everything starting from one entry point, and `HtmlWebpackPlugin` injects the right
+`<script>` tag automatically so we never hand-edit it. The `[contenthash]` in the output filename changes only
+when the file's bytes change, which is what makes long-term browser caching safe."
