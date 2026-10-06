@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "-w", "apps/host"],
       "port": 3000
+    },
+    {
+      "name": "payment-methods",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "apps/payment-methods"],
+      "port": 3001
     }
   ]
 }

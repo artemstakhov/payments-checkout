@@ -33,3 +33,20 @@ How I'd explain it in an interview: "Webpack's `babel-loader` transpiles each Ty
 Babel config, bundles everything starting from one entry point, and `HtmlWebpackPlugin` injects the right
 `<script>` tag automatically so we never hand-edit it. The `[contenthash]` in the output filename changes only
 when the file's bytes change, which is what makes long-term browser caching safe."
+
+## Day 1, Step 3: payment-methods remote, standalone, styled-components
+
+What we did: same Webpack setup as the host (babel-loader, HtmlWebpackPlugin, contenthash, devServer), but on
+port 3001 and with `Access-Control-Allow-Origin: *` on the dev server — needed later once the host fetches this
+app's `remoteEntry.js` across origins for Module Federation. Styling uses `styled-components` instead of SCSS
+Modules, plus `babel-plugin-styled-components` added to the shared root `babel.config.json`. Verified build and
+dev server both work, checked rendering + actual CSS in a browser.
+
+Why: this app needs to run two ways — standalone on its own port (what we just verified) and later embedded
+inside the host via Module Federation. Getting it working standalone first, before adding Module Federation's
+complexity, keeps this step small and isolates bugs.
+
+How I'd explain it in an interview: "The remote app bundles with the same Webpack setup as the host, just a
+different port, so it can run and be tested completely on its own. It uses styled-components for CSS-in-JS
+instead of SCSS Modules, as a deliberate contrast with the host's styling approach — both are real patterns
+teams use, so I wanted hands-on experience with each."
