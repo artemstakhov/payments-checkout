@@ -19,6 +19,22 @@ module.exports = {
           },
         },
       },
+      {
+        test: /\.module\.scss$/,
+        use: [
+          'style-loader',
+          {
+            loader: 'css-loader',
+            options: {
+              modules: {
+                namedExport: false,
+                exportLocalsConvention: 'as-is',
+              },
+            },
+          },
+          'sass-loader',
+        ],
+      },
     ],
   },
   output: {

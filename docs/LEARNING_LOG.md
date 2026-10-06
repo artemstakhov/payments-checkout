@@ -50,3 +50,21 @@ How I'd explain it in an interview: "The remote app bundles with the same Webpac
 different port, so it can run and be tested completely on its own. It uses styled-components for CSS-in-JS
 instead of SCSS Modules, as a deliberate contrast with the host's styling approach — both are real patterns
 teams use, so I wanted hands-on experience with each."
+
+## Day 1, Step 4: SCSS Modules for host
+
+What we did: added a Webpack rule for `*.module.scss` — `sass-loader` compiles Sass to CSS, `css-loader` scopes
+every class name to the file (with `namedExport: false, exportLocalsConvention: 'as-is'` so `import styles from
+'./x.module.scss'` keeps working instead of needing named imports), `style-loader` injects the result into the
+page. Added a `scss.d.ts` ambient type so TypeScript knows what `import styles from './x.module.scss'` returns.
+Verified in the browser that the generated class name is a hash, not literally `.wrapper` — proving the scoping
+is real, not just visual coincidence.
+
+Why: without module scoping, two components anywhere in the app using a `.wrapper` class would silently fight
+over the same global CSS rule. The `namedExport: false` setting specifically exists because `css-loader` changed
+its default a few major versions ago (a real gotcha Artem will hit again with any recently-bootstrapped project).
+
+How I'd explain it in an interview: "Webpack's css-loader rewrites every class name in a `.module.scss` file into
+a unique, scoped identifier, so `styles.wrapper` in my code becomes a hashed class at build time — two files can
+both have a `.wrapper` rule and never collide. I had to explicitly disable css-loader's newer default of named
+exports to keep using the common `import styles from './x.module.scss'` pattern."
