@@ -10,11 +10,11 @@ description. Honest label: personal learning project.
 
 ## Day 1: Webpack + Module Federation (target: 5-6 h)
 - [x] Monorepo (npm workspaces), TS strict, Prettier, ESLint, shared Babel config.
-- [ ] Webpack 5 config per app: babel-loader, SCSS Modules (host), styled-components (remote), HtmlWebpackPlugin,
+- [x] Webpack 5 config per app: babel-loader, SCSS Modules (host), styled-components (remote), HtmlWebpackPlugin,
       contenthash file names, devServer, code splitting by route (React.lazy).
-- [ ] Module Federation: remote exposes `./PaymentMethods`; host consumes it; shared singletons; async bootstrap.
+- [x] Module Federation: remote exposes `./PaymentMethods`; host consumes it; shared singletons; async bootstrap.
 - [ ] Resilience: Suspense + error boundary; page still works when the remote is down.
-- [ ] Remote runs standalone on :3001 as well.
+- [x] Remote runs standalone on :3001 as well.
 - [ ] (Stretch, only if time is left) second remote `order-summary` to show several micro-frontends.
 Acceptance: `npm run dev` shows /checkout with radio group from the remote; killing the remote shows a fallback
 message and the header still works; `npm run build` passes; you can explain what `remoteEntry.js` is.

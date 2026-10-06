@@ -86,3 +86,32 @@ How I'd explain it in an interview: "I used React Router's client-side routing s
 updates the URL via the History API without a full page reload. The header lives outside the `<Routes>` block on
 purpose, so it survives even if the routed page itself throws — that matters once the checkout route depends on
 a remote micro-frontend that can fail independently."
+
+## Day 1, Step 6: Module Federation — host consumes the remote at runtime
+
+What we did: gave both apps an async bootstrap boundary (`index.ts` does only `import('./bootstrap')`, the real
+app code moved to `bootstrap.tsx`) — required because Webpack must fetch and evaluate the federation "container"
+before it knows which shared modules are even needed. Remote's `webpack.config.js` got a `ModuleFederationPlugin`
+exposing `./PaymentMethods` (split out of `App.tsx` into its own `PaymentMethods.tsx`, so the exposed unit is
+separate from the remote's standalone dev harness) and marking `react`/`react-dom`/`styled-components` as
+`singleton: true`. Host's config got the matching consumer side: `remotes: { paymentMethods: 'paymentMethods@
+http://localhost:3001/remoteEntry.js' }`, plus the same singleton list (adding `react-router-dom`). Host's
+`CheckoutPage` loads the remote via `React.lazy(() => import('paymentMethods/PaymentMethods'))` wrapped in
+`<Suspense>`, and a `remotes.d.ts` ambient type tells TypeScript what that otherwise-invisible module exports.
+Hit one real bug along the way: navigating directly to `/checkout` (not via client-side link) 404'd, because the
+dev server had nothing to serve at that literal path — fixed with `devServer.historyApiFallback: true`. Verified
+with both dev servers running together: host (port 3000) actually fetched `remoteEntry.js` cross-origin from
+port 3001 and rendered the remote's styled-components box inside the host page.
+
+Why: `singleton: true` matters because React's hooks rely on one single module instance holding internal state —
+two separate copies of React (one bundled in host, one in the remote) would make the remote's `useState` etc.
+operate on a completely different React instance than the one actually managing the DOM, breaking silently or
+loudly depending on what's used. The async-boundary rule exists because Module Federation needs a moment, before
+any app code runs, to go fetch the manifest and agree on which shared module versions to actually use.
+
+How I'd explain it in an interview: "Module Federation lets the host fetch and render a component from a
+completely separately-built and separately-deployed app, at runtime, via a manifest file called `remoteEntry.js`.
+Both apps mark `react` and `react-dom` as singleton shared dependencies so there's only ever one copy of React
+running, which is required for hooks to work correctly across the module boundary. Because the federation runtime
+has to load before any app code can safely run, the entry point of each app is just a dynamic `import()` — that's
+the 'async boundary' gotcha."

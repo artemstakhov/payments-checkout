@@ -1,3 +1,15 @@
+import { lazy, Suspense } from 'react';
+
+const PaymentMethods = lazy(() =>
+  import('paymentMethods/PaymentMethods').then((module) => ({ default: module.PaymentMethods })),
+);
+
 export function CheckoutPage(): JSX.Element {
-  return <section>Checkout page — payment methods will load here.</section>;
+  return (
+    <section>
+      <Suspense fallback={<p>Loading payment methods…</p>}>
+        <PaymentMethods />
+      </Suspense>
+    </section>
+  );
 }

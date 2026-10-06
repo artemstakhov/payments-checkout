@@ -1,8 +1,9 @@
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  entry: './src/index.tsx',
+  entry: './src/index.ts',
   devtool: 'source-map',
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
@@ -44,10 +45,23 @@ module.exports = {
   },
   devServer: {
     port: 3000,
+    historyApiFallback: true,
   },
   plugins: [
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'public/index.html'),
+    }),
+    new webpack.container.ModuleFederationPlugin({
+      name: 'host',
+      remotes: {
+        paymentMethods: 'paymentMethods@http://localhost:3001/remoteEntry.js',
+      },
+      shared: {
+        react: { singleton: true },
+        'react-dom': { singleton: true },
+        'react-router-dom': { singleton: true },
+        'styled-components': { singleton: true },
+      },
     }),
   ],
 };

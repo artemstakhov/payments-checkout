@@ -6,6 +6,9 @@
     "apps/*"
   ],
   "scripts": {
+    "dev": "run-p -l \"dev:*\"",
+    "dev:host": "npm run dev -w apps/host",
+    "dev:payment-methods": "npm run dev -w apps/payment-methods",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -24,6 +27,7 @@
     "eslint-config-prettier": "^9.1.0",
     "globals": "^17.13.0",
     "html-webpack-plugin": "^5.6.8",
+    "npm-run-all2": "^8.0.4",
     "prettier": "^3.3.0",
     "sass": "^1.99.0",
     "sass-loader": "^16.0.8",

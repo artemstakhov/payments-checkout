@@ -1,8 +1,9 @@
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-  entry: './src/index.tsx',
+  entry: './src/index.ts',
   devtool: 'source-map',
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
@@ -35,6 +36,18 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, 'public/index.html'),
+    }),
+    new webpack.container.ModuleFederationPlugin({
+      name: 'paymentMethods',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './PaymentMethods': './src/PaymentMethods',
+      },
+      shared: {
+        react: { singleton: true },
+        'react-dom': { singleton: true },
+        'styled-components': { singleton: true },
+      },
     }),
   ],
 };
