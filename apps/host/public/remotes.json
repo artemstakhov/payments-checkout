@@ -1,0 +1,4 @@
+{
+  "paymentMethods": "http://localhost:3001/remoteEntry.js",
+  "orderSummary": "http://localhost:3002/remoteEntry.js"
+}

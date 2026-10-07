@@ -9,7 +9,11 @@ module.exports = tseslint.config(
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    files: ['apps/host/**/*.{ts,tsx}', 'apps/payment-methods/**/*.{ts,tsx}'],
+    files: [
+      'apps/host/**/*.{ts,tsx}',
+      'apps/payment-methods/**/*.{ts,tsx}',
+      'apps/order-summary/**/*.{ts,tsx}',
+    ],
     languageOptions: {
       globals: globals.browser,
     },

@@ -139,3 +139,51 @@ lazy-loaded remote component, so if the micro-frontend fails to load — network
 whatever — the header and the rest of the page keep working, and the user sees a clear message instead of a blank
 or broken page. I verified this by actually killing the remote's dev server and confirming the fallback rendered,
 rather than just trusting the code looked right."
+
+## Day 2, Step 0: Module Federation hardening — dynamic remotes, second remote, per-remote isolation
+
+What we did, four related fixes:
+
+1. **Shared version resolution**: host's webpack config claimed to share `styled-components` as a singleton but
+   never declared it in host's own `package.json` — Webpack's auto version-detection had nothing to read. Fixed
+   by adding it as a `peerDependency` (not a regular dependency — host coordinates the version but never actually
+   imports the package, so `peerDependencies` is the semantically correct place for it).
+2. **Dynamic remotes**: removed the hardcoded `remotes: { paymentMethods: '...' }` from host's
+   `ModuleFederationPlugin` entirely. Added `public/remotes.json` (a plain URL lookup table) and
+   `copy-webpack-plugin` so it ships in the production build too, not just served by the dev server. Wrote
+   `remoteLoader.ts` — a manual implementation of Webpack's "dynamic remote" pattern: fetch the manifest, inject
+   a `<script>` tag for the remote's `remoteEntry.js`, call `__webpack_init_sharing__`/`container.init()` to join
+   the shared-dependency negotiation, then `container.get(module)` to retrieve the actual component. Deleted
+   `remotes.d.ts` — it existed specifically to type the old static `import('paymentMethods/...')` syntax, which
+   no longer exists in the code. Real trade-off: TypeScript and Webpack can no longer statically verify a remote
+   exists at all — it's pure runtime wiring now. Verified host's production build output no longer has any
+   `remote paymentMethods/...` reference, unlike Day 1's build.
+3. **Second remote**: `apps/order-summary`, identical shape to `payment-methods` (own webpack config, own
+   `ModuleFederationPlugin` exposing `./OrderSummary`, standalone on port 3002).
+4. **Per-remote error boundaries**: `CheckoutPage` now renders two separate `<ErrorBoundary><Suspense>...` pairs,
+   one per remote, each with its own fallback message. Verified by killing only `order-summary`'s dev server and
+   confirming (via `document.getElementById('root').innerText`, not screenshots — see below) that
+   `payment-methods` kept rendering normally while only order-summary showed its fallback.
+
+A real dead end worth recording: tried to stop webpack-dev-server's error overlay from covering the page during
+this failure test (same issue as Day 1 Step 7, different trigger — this time a native `<script>` tag's `onerror`,
+not a rejected dynamic `import()`). Set `devServer.client.overlay: false` (the documented way to fully disable
+it) and it still showed up — confirmed via `document.body.children` that the overlay is a real
+`<iframe id="webpack-dev-server-client-overlay">` injected into the page, not a Claude Browser tool artifact, so
+the setting genuinely isn't taking effect for this failure category in this webpack-dev-server version. Didn't
+keep digging — not worth the time for a cosmetic dev-only issue when `innerText`/console/network inspection
+already prove the app is behaving correctly underneath it. Lesson: when a dev tool's visual signal disagrees with
+direct inspection of actual state, trust the direct inspection, and don't assume "red screen" means "broken."
+
+Why: all four fixes point at the same theme — Day 1's Module Federation setup only worked because it ran on one
+machine with hardcoded assumptions (one remote, one fixed URL, implicitly-resolved shared versions). None of that
+survives contact with "this needs to deploy to three different environments" or "we're adding a second team's
+micro-frontend." Hardening it now, with two remotes, is what actually proves the pattern generalizes.
+
+How I'd explain it in an interview: "We moved from build-time-configured remotes to runtime-configured ones — the
+host fetches a small JSON manifest on startup and uses Webpack's dynamic container API to load whatever remotes
+that manifest lists, instead of baking URLs into the bundle. That's what lets the same build get deployed to
+different environments without a rebuild. The trade-off is we lose compile-time verification that a remote
+actually exists — Webpack can't check it anymore, it's pure runtime wiring. I also made sure each remote has its
+own error boundary, not one shared boundary around both, so one micro-frontend failing doesn't take a working one
+down with it — verified that by actually killing one remote's dev server and confirming the other kept working."

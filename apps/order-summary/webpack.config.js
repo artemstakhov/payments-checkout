@@ -1,7 +1,6 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: './src/index.ts',
@@ -21,22 +20,6 @@ module.exports = {
           },
         },
       },
-      {
-        test: /\.module\.scss$/,
-        use: [
-          'style-loader',
-          {
-            loader: 'css-loader',
-            options: {
-              modules: {
-                namedExport: false,
-                exportLocalsConvention: 'as-is',
-              },
-            },
-          },
-          'sass-loader',
-        ],
-      },
     ],
   },
   output: {
@@ -45,10 +28,9 @@ module.exports = {
     clean: true,
   },
   devServer: {
-    port: 3000,
-    historyApiFallback: true,
-    client: {
-      overlay: false,
+    port: 3002,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
     },
   },
   plugins: [
@@ -56,16 +38,16 @@ module.exports = {
       template: path.resolve(__dirname, 'public/index.html'),
     }),
     new webpack.container.ModuleFederationPlugin({
-      name: 'host',
+      name: 'orderSummary',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './OrderSummary': './src/OrderSummary',
+      },
       shared: {
         react: { singleton: true },
         'react-dom': { singleton: true },
-        'react-router-dom': { singleton: true },
         'styled-components': { singleton: true },
       },
-    }),
-    new CopyWebpackPlugin({
-      patterns: [{ from: path.resolve(__dirname, 'public/remotes.json'), to: 'remotes.json' }],
     }),
   ],
 };

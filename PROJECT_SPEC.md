@@ -9,17 +9,19 @@ description. Honest label: personal learning project.
 - `apps/server`: tiny GraphQL API (Apollo Server) with in-memory data.
 
 ## Day 1: Webpack + Module Federation (target: 5-6 h)
-- [x] Monorepo (npm workspaces), TS strict, Prettier, ESLint, shared Babel config.
-- [x] Webpack 5 config per app: babel-loader, SCSS Modules (host), styled-components (remote), HtmlWebpackPlugin,
+- [ ] Monorepo (npm workspaces), TS strict, Prettier, ESLint, shared Babel config.
+- [ ] Webpack 5 config per app: babel-loader, SCSS Modules (host), styled-components (remote), HtmlWebpackPlugin,
       contenthash file names, devServer, code splitting by route (React.lazy).
-- [x] Module Federation: remote exposes `./PaymentMethods`; host consumes it; shared singletons; async bootstrap.
-- [x] Resilience: Suspense + error boundary; page still works when the remote is down.
-- [x] Remote runs standalone on :3001 as well.
-- [ ] (Stretch, only if time is left) second remote `order-summary` to show several micro-frontends.
+- [ ] Module Federation: remote exposes `./PaymentMethods`; host consumes it; shared singletons; async bootstrap.
+- [ ] Resilience: Suspense + error boundary; page still works when the remote is down.
+- [ ] Remote runs standalone on :3001 as well.
 Acceptance: `npm run dev` shows /checkout with radio group from the remote; killing the remote shows a fallback
 message and the header still works; `npm run build` passes; you can explain what `remoteEntry.js` is.
 
 ## Day 2: GraphQL + Apollo + checkout flow (target: 6-7 h)
+- [x] Step 0 (Module Federation hardening): verify each app's package.json declares the shared libraries; remove the
+      hard-coded remote URL from the host (runtime `remotes.json` + dynamic remotes, no rebuild per environment);
+      add a second remote `order-summary`; each remote wrapped in its own error boundary.
 - [ ] `apps/server`: schema `paymentMethods(currency)`, `createPayment(input)` mutation (validation errors,
       idempotency key), in-memory store.
 - [ ] Apollo Client in host: `InMemoryCache` with `typePolicies`, a reactive variable for the cart/selected method.
