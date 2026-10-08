@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { loadRemoteModule } from '../remoteLoader';
+import { PaymentMethodsFromServer } from '../PaymentMethodsFromServer';
 
 interface PaymentMethodsModule {
   PaymentMethods: () => JSX.Element;
@@ -26,6 +27,7 @@ const OrderSummary = lazy(async () => {
 export function CheckoutPage(): JSX.Element {
   return (
     <section>
+      <PaymentMethodsFromServer />
       <ErrorBoundary
         fallback={<p>Payment methods are unavailable right now. Please try again later.</p>}
       >

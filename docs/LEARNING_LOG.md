@@ -243,3 +243,41 @@ idempotency key is a client-generated id sent with the mutation; the server cach
 network retry with the same key gets back the identical response instead of creating a second payment. I didn't
 just trust that the code did this — I replayed the same key with curl and confirmed the payment id didn't
 change."
+
+## Day 2, Step 2: Apollo Client in host — cache, typePolicies, reactive variables
+
+What we did: `apolloClient.ts` sets up an `ApolloClient` pointed at `http://localhost:4000/`, with an
+`InMemoryCache` whose `typePolicies` explicitly declares `keyArgs: ['currency']` on the `paymentMethods` field —
+documenting on purpose a caching behavior the cache would have done by default anyway, because being explicit
+about cache keys survives schema changes better than relying on an implicit default. Added
+`selectedPaymentMethodIdVar`, a `makeVar<string | null>(null)` reactive variable, and a real component
+(`PaymentMethodsFromServer`) that queries `paymentMethods(currency: "USD")` from the live server via `useQuery`
+and reads/writes the reactive variable via `useReactiveVar` as radio buttons get clicked.
+
+Hit a genuine, undocumented-to-me API change: the query includes a `selectedPaymentMethodId @client` field (to
+read local-only state alongside server data in one query), and Apollo Client v4 rejected it outright —
+`"contains @client fields but local state has not been configured"`. In Apollo Client v3, a cache `typePolicies`
+field `read()` function was enough to serve a `@client` field. In v4, that mechanism moved to a separate
+`LocalState` class with its own `resolvers` map, passed to `ApolloClient({ localState: new LocalState({...}) })`
+— confirmed by reading the actual `.d.ts` source in `node_modules`, not by guessing from memory of an older
+version. Fixed by moving the `selectedPaymentMethodId` resolution there instead of the cache.
+
+Verified live, not just typechecked: ran the real server + host together, confirmed the radio group rendered
+real data fetched from the GraphQL server (not hardcoded), clicked "Credit or debit card," and confirmed "Selected: none" became "Selected: card" — proof the reactive variable actually drives a re-render, not just that the
+code compiles.
+
+Why: `typePolicies` exist so you can be explicit about cache behavior instead of hoping the defaults are right
+forever — a schema change later (like `paymentMethods` gaining a second argument) could silently change what the
+default cache key includes, breaking caching in a way that's hard to notice. Reactive variables solve the
+specific problem of "UI-only state that several components need to read reactively" without inventing a second
+state-management system (Redux, Zustand, etc.) alongside Apollo — the cache already has a re-render mechanism,
+reactive variables just plug client state into it.
+
+How I'd explain it in an interview: "Apollo Client normalizes server responses into one shared cache, so
+multiple components querying overlapping data don't each hold their own stale copy. `typePolicies` let you
+override the cache's default behavior per field — I used `keyArgs` to be explicit about which arguments should
+produce separate cache entries. Reactive variables are Apollo's mechanism for client-only state — like which
+radio button is selected — that still participates in the same re-render system as server data, so you don't
+need a separate state library just for UI state. I actually hit a real version-to-version API change getting the
+`@client` field working, which was a good reminder to verify library behavior against the installed version's
+actual types instead of trusting memory of an older API."
