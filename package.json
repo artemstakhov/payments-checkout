@@ -6,7 +6,9 @@
     "apps/*"
   ],
   "scripts": {
+    "predev": "kill-port 3000 3001 3002 4000",
     "dev": "run-p -l \"dev:*\"",
+    "free-ports": "kill-port 3000 3001 3002 4000",
     "dev:host": "npm run dev -w apps/host",
     "dev:payment-methods": "npm run dev -w apps/payment-methods",
     "dev:order-summary": "npm run dev -w apps/order-summary",
@@ -30,6 +32,7 @@
     "eslint-config-prettier": "^9.1.0",
     "globals": "^17.13.0",
     "html-webpack-plugin": "^5.6.8",
+    "kill-port": "^2.0.1",
     "npm-run-all2": "^8.0.4",
     "prettier": "^3.3.0",
     "sass": "^1.99.0",
