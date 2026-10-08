@@ -281,3 +281,24 @@ radio button is selected — that still participates in the same re-render syste
 need a separate state library just for UI state. I actually hit a real version-to-version API change getting the
 `@client` field working, which was a good reminder to verify library behavior against the installed version's
 actual types instead of trusting memory of an older API."
+
+## Day 2, Step 2b: wiring createPayment to a real button
+
+What we did: added `useMutation` for `CREATE_PAYMENT_MUTATION` alongside the existing `useQuery`, plus a "Pay
+$10.00" button that calls it with the selected payment method and a fresh `crypto.randomUUID()` idempotency key
+per click. Verified by actually clicking through it in the browser — selected PayPal, clicked Pay, saw "Payment
+succeeded: 1000 USD" render from a real server round trip, not a curl request this time.
+
+Why: `createPayment` had only ever been exercised through curl before this — proving the mutation itself worked
+is different from proving the whole chain (click → `useMutation` → network → resolver → union result → component
+re-render) works, and those are genuinely different failure surfaces.
+
+Also discussed without building yet (deliberately, to stay in scope): the real production question of how a
+mutation's result propagates to _other_ parts of the UI that show related data — `refetchQueries` vs `cache.modify`
+vs `optimisticResponse` — and specifically why that problem is what makes `@apollo/client` need to be a Module
+Federation shared singleton: a remote with its own separate Apollo Client instance would have its own separate
+cache, invisible to a mutation that ran through host's client. That's the next step.
+
+How I'd explain it in an interview: "`useMutation` gives you a trigger function plus its own loading/error state,
+separate from any query. I generate a fresh idempotency key per click with `crypto.randomUUID()` so each explicit
+user action is treated as a genuinely new attempt, not an accidental replay of a previous one."
