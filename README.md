@@ -48,6 +48,27 @@ curl -s -X POST http://localhost:4000/ \
 Try swapping `"USD"` for `"EUR"`, or a currency with no matches, or removing the `query { ... }` wrapper to see
 GraphQL's schema validation reject a malformed request before any resolver code runs.
 
+The `createPayment` mutation returns a union (`CreatePaymentSuccess | CreatePaymentError`), so the query needs
+inline fragments (`... on TypeName { ... }`) to select fields from each possible outcome:
+
+```bash
+# success
+curl -s -X POST http://localhost:4000/ \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { createPayment(input: { paymentMethodId: \"card\", amount: 2500, currency: \"USD\", idempotencyKey: \"demo-1\" }) { __typename ... on CreatePaymentSuccess { payment { id status amount currency } } ... on CreatePaymentError { errors { field message } } } }"}'
+
+# validation errors — bad payment method id AND a non-positive amount, both returned together
+curl -s -X POST http://localhost:4000/ \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { createPayment(input: { paymentMethodId: \"nope\", amount: -5, currency: \"USD\", idempotencyKey: \"demo-2\" }) { __typename ... on CreatePaymentSuccess { payment { id } } ... on CreatePaymentError { errors { field message } } } }"}'
+
+# replay the SAME idempotencyKey ("demo-1") — compare the returned payment `id` to the first
+# call above: it should be identical, proving the retry did not create a second payment
+curl -s -X POST http://localhost:4000/ \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { createPayment(input: { paymentMethodId: \"card\", amount: 2500, currency: \"USD\", idempotencyKey: \"demo-1\" }) { __typename ... on CreatePaymentSuccess { payment { id } } } }"}'
+```
+
 ### Other commands
 
 ```bash

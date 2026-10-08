@@ -22,7 +22,7 @@ message and the header still works; `npm run build` passes; you can explain what
 - [x] Step 0 (Module Federation hardening): verify each app's package.json declares the shared libraries; remove the
       hard-coded remote URL from the host (runtime `remotes.json` + dynamic remotes, no rebuild per environment);
       add a second remote `order-summary`; each remote wrapped in its own error boundary.
-- [ ] `apps/server`: schema `paymentMethods(currency)`, `createPayment(input)` mutation (validation errors,
+- [x] `apps/server`: schema `paymentMethods(currency)`, `createPayment(input)` mutation (validation errors,
       idempotency key), in-memory store.
 - [ ] Apollo Client in host: `InMemoryCache` with `typePolicies`, a reactive variable for the cart/selected method.
 - [ ] Share `@apollo/client` as a `singleton` in Module Federation: the REMOTE (`PaymentMethods`) runs its own GraphQL

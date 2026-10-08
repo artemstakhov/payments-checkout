@@ -216,3 +216,30 @@ nullability — completely separately from how that data gets produced. A resolv
 Apollo calls to fill in one field's value. Required-argument validation happens automatically against the schema,
 before any of my own code runs, which I confirmed by sending a request missing the required `currency` argument
 and getting a schema-level validation error back, not a crash from my resolver."
+
+## Day 2, Step 1b: createPayment mutation — result unions and idempotency keys
+
+What we did: added a `createPayment(input: CreatePaymentInput!): CreatePaymentResult!` mutation where
+`CreatePaymentResult` is a union of `CreatePaymentSuccess | CreatePaymentError`, instead of throwing a generic
+error for bad input. Validation (unknown `paymentMethodId`, `currency` that doesn't match the chosen method,
+non-positive `amount`) collects _all_ problems into a `FieldError[]` instead of stopping at the first one, so a
+client can fix everything in one round trip. Idempotency: a `Map<idempotencyKey, CreatePaymentResult>` remembers
+every outcome (success or validation error) and returns the exact same stored result on a repeat key, instead of
+reprocessing. Verified all of it with real `curl` requests, not just types: a successful payment, two validation
+errors returned together in one response, a currency-mismatch error, a genuinely new payment getting a new id,
+and — the one that actually proves idempotency works — replaying the same `idempotencyKey` twice and confirming
+the second response had the _identical_ payment `id` as the first, meaning nothing was created twice.
+
+Why: real payment APIs live or die on this exact problem — a client can never fully trust that a timed-out
+request didn't actually succeed server-side, so blind retries without idempotency keys are how people get charged
+twice. Returning structured validation errors as a typed union (rather than the generic top-level GraphQL
+`errors` array) keeps "the user typo'd their input" and "the server crashed" as genuinely different, separately
+typed outcomes a client can handle differently — one is worth showing inline on a form, the other isn't.
+
+How I'd explain it in an interview: "createPayment returns a union type so the schema itself documents every
+possible outcome — success with a payment, or a structured list of field-level validation errors — instead of
+relying on GraphQL's generic error channel for something that's actually an expected, normal response. The
+idempotency key is a client-generated id sent with the mutation; the server caches the result by that key, so a
+network retry with the same key gets back the identical response instead of creating a second payment. I didn't
+just trust that the code did this — I replayed the same key with curl and confirmed the payment id didn't
+change."
