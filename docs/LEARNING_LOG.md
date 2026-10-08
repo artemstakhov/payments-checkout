@@ -187,3 +187,32 @@ different environments without a rebuild. The trade-off is we lose compile-time 
 actually exists — Webpack can't check it anymore, it's pure runtime wiring. I also made sure each remote has its
 own error boundary, not one shared boundary around both, so one micro-frontend failing doesn't take a working one
 down with it — verified that by actually killing one remote's dev server and confirming the other kept working."
+
+## Day 2, Step 1: apps/server — first GraphQL schema and query
+
+What we did: Apollo Server (`@apollo/server`) serving a schema written in SDL — one object type
+(`PaymentMethod`), one `Query` field (`paymentMethods(currency: String!): [PaymentMethod!]!`) — backed by a
+resolver that filters an in-memory array by the `currency` argument. Split into `schema.ts` (the contract),
+`resolvers.ts` (the "how"), `data.ts` (the fake store), kept separate on purpose so each has one job. Verified
+with real HTTP requests (`curl` against the running server, not just a passing typecheck): USD returns card +
+PayPal, EUR returns card + SEPA, a currency with no matches returns an empty array (not an error — a real `[]` is
+a valid, correct answer), and omitting the required `currency` argument entirely fails with a GraphQL validation
+error _before_ our resolver code ever runs — proof the schema is an enforced contract, not just documentation.
+
+Real detour along the way, not part of the GraphQL work itself: `@apollo/server@5` (needed for a CSRF-bypass fix)
+requires Node ≥22.15; our machine was on Node 20.18. Upgrading Node turned into its own multi-step debugging
+session — a winget install that silently failed (registered as "installed" with no actual files), then an MSI
+install that landed at the bare `E:\` drive root instead of a proper folder, which had to be relocated to
+`E:\node24` and the system `PATH` cleaned up by hand. None of this was GraphQL-specific, but it's a realistic
+example of how much of "add a library" work is actually "fight the environment until the library can run."
+
+Why: splitting schema/resolvers/data isn't just tidiness — in a real codebase the schema is what the frontend
+team reads to know what's possible to query, resolvers are backend implementation detail that can change without
+the contract changing, and swapping `data.ts`'s array for a real database later shouldn't touch the other two
+files at all.
+
+How I'd explain it in an interview: "The schema defines what a client is allowed to ask for — field names, types,
+nullability — completely separately from how that data gets produced. A resolver is just a plain function that
+Apollo calls to fill in one field's value. Required-argument validation happens automatically against the schema,
+before any of my own code runs, which I confirmed by sending a request missing the required `currency` argument
+and getting a schema-level validation error back, not a crash from my resolver."

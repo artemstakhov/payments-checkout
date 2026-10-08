@@ -10,6 +10,7 @@
     "dev:host": "npm run dev -w apps/host",
     "dev:payment-methods": "npm run dev -w apps/payment-methods",
     "dev:order-summary": "npm run dev -w apps/order-summary",
+    "dev:server": "npm run dev -w apps/server",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",

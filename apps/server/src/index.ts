@@ -1,3 +1,16 @@
-export function describeServer(): string {
-  return 'server scaffold';
+import { ApolloServer } from '@apollo/server';
+import { startStandaloneServer } from '@apollo/server/standalone';
+import { typeDefs } from './schema';
+import { resolvers } from './resolvers';
+
+async function main(): Promise<void> {
+  const server = new ApolloServer({ typeDefs, resolvers });
+
+  const { url } = await startStandaloneServer(server, {
+    listen: { port: 4000 },
+  });
+
+  console.log(`GraphQL server ready at ${url}`);
 }
+
+main();
