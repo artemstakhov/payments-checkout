@@ -47,6 +47,7 @@ module.exports = {
         react: { singleton: true },
         'react-dom': { singleton: true },
         'styled-components': { singleton: true },
+        '@apollo/client': { singleton: true },
       },
     }),
   ],

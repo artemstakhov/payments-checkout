@@ -62,6 +62,7 @@ module.exports = {
         'react-dom': { singleton: true },
         'react-router-dom': { singleton: true },
         'styled-components': { singleton: true },
+        '@apollo/client': { singleton: true },
       },
     }),
     new CopyWebpackPlugin({

@@ -302,3 +302,41 @@ cache, invisible to a mutation that ran through host's client. That's the next s
 How I'd explain it in an interview: "`useMutation` gives you a trigger function plus its own loading/error state,
 separate from any query. I generate a fresh idempotency key per click with `crypto.randomUUID()` so each explicit
 user action is treated as a genuinely new attempt, not an accidental replay of a previous one."
+
+## Day 2, Step 3: shared Apollo Client across the Module Federation boundary
+
+What we did: `payment-methods`' real exposed component (`PaymentMethods.tsx`) now runs a genuine `useQuery` against
+the live server instead of rendering static text, and `@apollo/client` is now in both host's and the remote's
+`shared` config as a singleton. The remote's `App.tsx` (its standalone dev harness) got its own
+`standaloneApolloClient` + `ApolloProvider` — used only when the remote runs alone at `:3001` — while the
+_exposed_ `PaymentMethods.tsx` itself brings no provider at all, so it correctly picks up whichever
+`ApolloProvider` is actually above it in the tree: its own standalone one, or host's shared one when embedded.
+Verified both modes live: standalone (`:3001` alone) rendered real data via its own client; embedded in host,
+both host's and the remote's payment-method sections rendered correctly together, alongside `order-summary`
+correctly showing its own isolated fallback (its server wasn't running) — proving per-remote error isolation
+still holds even with Apollo Client now in the mix.
+
+The actual "prove the shared cache is real" check hit a false alarm first, worth recording honestly: filtering
+network requests by `urlPattern=4000` showed two `POST` requests and I almost concluded caching _wasn't_ shared.
+Reading the _full_, unfiltered request log showed why: an earlier test had accidentally triggered a full page
+reload, so what I was looking at was two separate page loads' worth of one request each, not two concurrent
+requests within a single page load. Redid it cleanly with one fresh navigation and confirmed the real thing:
+exactly one `POST` to `/`, and critically, it completed _before_ the remote's own JS chunk had even finished
+downloading — so by the time the remote mounted and called its own `useQuery`, the data was already sitting in
+the shared cache. Zero network calls from the remote's query. That's the shared singleton actually doing its job,
+not just configured correctly on paper.
+
+Why: this is the concrete payoff of everything Day 1's Module Federation work set up. `@apollo/client` as a
+singleton means one real `ApolloClient` instance and one real cache exist, no matter how many separately-built,
+separately-deployed apps are rendering into the page at once — a mutation that runs in host is immediately
+visible to a query in the remote, and vice versa, without any manual syncing. Without the singleton, each app
+would get its own copy of the `@apollo/client` module, each with totally separate cache state, and the two
+"shared Apollo Client" boxes we have today would silently become two unrelated ones.
+
+How I'd explain it in an interview: "The remote has to work in two different contexts — standalone, where it
+needs its own Apollo Client, and embedded in the host, where it should share the host's client and cache instead
+of creating a second one. I solved that by keeping the provider out of the exposed component entirely and only
+wrapping it in the remote's own standalone dev harness — so the component itself doesn't know or care which
+provider it's getting, it just reads from context. I verified the cache sharing was real, not just configured,
+by checking the network tab: only one request reached the GraphQL server even though two separately-built apps
+both queried for the same data."
