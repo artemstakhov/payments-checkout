@@ -340,3 +340,63 @@ wrapping it in the remote's own standalone dev harness — so the component itse
 provider it's getting, it just reads from context. I verified the cache sharing was real, not just configured,
 by checking the network tab: only one request reached the GraphQL server even though two separately-built apps
 both queried for the same data."
+
+## Day 2, Step 4: GraphQL Code Generator — and a chain of real problems it surfaced
+
+What we did: schema is now a single real `.graphql` file (`apps/server/schema.graphql`), read by the server at
+startup instead of duplicated as an inline string. `codegen.ts` reads that schema plus every `gql`-tagged
+operation in `apps/host` and `apps/payment-methods`, and generates `TypedDocumentNode`s — the pattern Apollo
+Client v4 actually wants (see the deprecation warning from the previous step), replacing every hand-written
+`*QueryResult`/`*QueryVariables` interface with mechanically-generated, schema-derived types, plus eliminating
+all manual generics on `useQuery`/`useMutation`.
+
+None of this came together on the first try — worth recording each wrong turn honestly, since each one taught
+something real:
+
+1. **Schema validation rejected `selectedPaymentMethodId @client`.** Correct behavior — that field only exists
+   via Apollo's `LocalState` resolver, never on the actual server. Fixed with the standard, documented pattern:
+   a small client-side schema extension file (`apps/host/client-schema.graphql`, `extend type Query { ... }`)
+   merged in just for host's codegen output, declaring local-only fields for validation purposes.
+2. **Picked `typed-document-node` over the originally-planned `typescript-react-apollo` plugin.** That plugin's
+   latest release (5.0.0 — nothing newer exists) still pulls a vulnerable, outdated `@graphql-tools/utils`
+   (prototype pollution, high severity) through its own pinned dependency chain. Combined with the fact that its
+   whole approach — generating wrapper hooks with manual generics — is exactly the pattern Apollo Client v4 just
+   deprecated, swapping it for `typed-document-node` fixed a real vulnerability _and_ produced output aligned
+   with the library's actual current direction, not just a security patch.
+3. **Duplicate `CreatePaymentInput` / `PaymentStatus` declarations when `typescript` and `typescript-operations`
+   wrote to the same file.** `typescript-operations` re-declares any Input type or Enum an operation touches, for
+   standalone usability — fine normally, but colliding when the base `typescript` plugin already declared the
+   same name in the same output file. Fixed by dropping the bare `typescript` plugin entirely: we only ever
+   consume operation-specific composite types in components, never raw schema types directly, so
+   `typescript-operations` alone is both sufficient and collision-free.
+4. **Our own `documents` glob matched our own generated output file.** On the second run, codegen tried to parse
+   `apps/host/src/generated/graphql.ts` itself looking for `gql` tags, choking on the first run's duplicate
+   declarations. Fixed with a negated glob pattern excluding the `generated/` folder — a classic, easy-to-miss
+   codegen footgun.
+5. **Removing the raw `gql` documents from components after generating typed versions broke the pipeline.**
+   Deleted `PaymentMethods.tsx`'s inline `gql` query when switching it to use the generated `TypedDocumentNode`
+   — which would have made the _next_ regeneration find zero operations and wipe the output, since codegen needs
+   the raw query text to exist _somewhere_ scannable as its actual input. Fixed by keeping the raw documents in
+   their own `queries.ts` files, clearly commented as "not imported at runtime, exists for codegen to scan."
+6. **A real production bug, unrelated to codegen itself but found while rebuilding the server:** the compiled
+   output's extension-less relative imports (`from './schema'`) are invalid under Node's actual strict ESM
+   resolver — found by _actually running_ `node dist/index.js`, not just `tsc --noEmit`, which doesn't catch this
+   class of bug at all. `tsx` (the dev script) tolerated it; plain Node did not. Fixed by compiling `apps/server`
+   to CommonJS specifically, since it isn't bundled by Webpack like the frontend apps are.
+
+Verified the whole chain end to end in a live browser afterward, not just via typecheck: selected a payment
+method, clicked Pay, got "Payment 1 succeeded: 1000 USD" — through the generated `CreatePaymentDocument`, with
+zero manually-written result types anywhere in that path anymore.
+
+Why: every one of these was the kind of problem that only shows up when you actually wire the generator into a
+real, non-trivial schema (a union type, a client-only field, a non-bundled backend) rather than a tutorial's
+single flat query — which is exactly why "it compiled" and "it works" turned out to be two different questions
+at several points in this step.
+
+How I'd explain it in an interview: "I set up GraphQL Code Generator to derive TypeScript types mechanically from
+the schema instead of hand-maintaining interfaces that can silently drift out of sync. I hit real version and
+configuration issues doing it — a deprecated vulnerable plugin, duplicate type declarations from combining two
+plugins in one file, a self-referential glob matching the tool's own output — and in each case traced it to its
+actual root cause using the installed package's own types or by directly running the failing command, rather
+than guessing. I also found a real server bug this way: a production build that typechecked fine but crashed
+immediately when actually run, because of a module-resolution difference between our dev runner and real Node."

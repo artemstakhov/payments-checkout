@@ -4,7 +4,7 @@ const eslintConfigPrettier = require('eslint-config-prettier');
 const globals = require('globals');
 
 module.exports = tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**'] },
+  { ignores: ['**/dist/**', '**/node_modules/**', '**/generated/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   eslintConfigPrettier,

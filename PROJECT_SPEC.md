@@ -27,7 +27,8 @@ message and the header still works; `npm run build` passes; you can explain what
 - [x] Apollo Client in host: `InMemoryCache` with `typePolicies`, a reactive variable for the cart/selected method.
 - [x] Share `@apollo/client` as a `singleton` in Module Federation: the REMOTE (`PaymentMethods`) runs its own GraphQL
       query through the HOST's Apollo Client / cache (explain what breaks with two client instances).
-- [ ] GraphQL Code Generator (typescript + typescript-operations + typescript-react-apollo): typed hooks, `npm run codegen`.
+- [x] GraphQL Code Generator (typescript-operations + typed-document-node, not typescript-react-apollo — see
+      LEARNING_LOG for why): typed documents consumed directly by Apollo's own hooks, `npm run codegen`.
 - [ ] Multi-step checkout with React Router: /checkout/details, /checkout/pay, /checkout/done.
 - [ ] Forms with validation (react-hook-form + zod), loading + error states for every request.
 Acceptance: full happy path works end to end; the mutation returns a typed result; invalid input shows errors;

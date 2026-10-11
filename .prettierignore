@@ -4,3 +4,4 @@ package-lock.json
 CLAUDE.md
 PROJECT_SPEC.md
 KICKOFF_PROMPT.md
+**/generated/**

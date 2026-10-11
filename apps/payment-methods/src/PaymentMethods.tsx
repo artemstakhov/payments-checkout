@@ -1,6 +1,6 @@
 import styled from 'styled-components';
-import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
+import { RemotePaymentMethodsDocument } from './generated/graphql';
 
 const Wrapper = styled.div`
   font-family: sans-serif;
@@ -8,35 +8,8 @@ const Wrapper = styled.div`
   border: 1px solid #ccc;
 `;
 
-interface PaymentMethod {
-  id: string;
-  label: string;
-  currency: string;
-}
-
-interface PaymentMethodsQueryResult {
-  paymentMethods: PaymentMethod[];
-}
-
-interface PaymentMethodsQueryVariables {
-  currency: string;
-}
-
-const PAYMENT_METHODS_QUERY = gql`
-  query RemotePaymentMethods($currency: String!) {
-    paymentMethods(currency: $currency) {
-      id
-      label
-      currency
-    }
-  }
-`;
-
 export function PaymentMethods(): JSX.Element {
-  const { data, loading, error } = useQuery<
-    PaymentMethodsQueryResult,
-    PaymentMethodsQueryVariables
-  >(PAYMENT_METHODS_QUERY, {
+  const { data, loading, error } = useQuery(RemotePaymentMethodsDocument, {
     variables: { currency: 'USD' },
   });
 
